@@ -101,7 +101,8 @@ void setup() {
   madflight_setup();  
 
   // Uncomment ONE line - select output type
-  int out_hz = 400; int min_us = 950; int max_us = 2000; //Standard PWM: 400Hz, 950-2000 us
+  int out_hz = 50; int min_us = 1000; int max_us = 2000; //Standard PWM: 50Hz, 1000-2000 us
+  //int out_hz = 400; int min_us = 950; int max_us = 2000; //Standard PWM: 400Hz, 950-2000 us
   //int out_hz = 2000; int min_us = 125; int max_us = 250; //Oneshot125: 2000Hz, 125-250 us
 
   // Setup 4 motors for the quadcopter

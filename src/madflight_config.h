@@ -34,12 +34,14 @@ If things do not work as expected, have a good look at the startup messages!
 const char madflight_config[] = R""(
 
 //--- IMU --- Inertial Measurement Unit  (use spi -OR- i2c bus)
-//imu_gizmo      NONE    // options: NONE, BMI270, MPU6000, MPU6050, MPU6500, MPU9150, MPU9250, ICM45686, ICM42688
-//imu_bus_type   SPI     // options: SPI, I2C (not all combinations of gizmo and bus_type are supported)
-//imu_align      CW0     // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
-//imu_spi_bus    -1 //spi
-//pin_imu_cs     -1 //spi
-//pin_imu_int    -1 //spi and i2c
+imu_gizmo      ICM20948   // options: NONE, BMI270, MPU6000, MPU6050, MPU6500, MPU9150, MPU9250, ICM45686, ICM42688, ICM20948
+imu_bus_type   SPI     // options: SPI, I2C (not all combinations of gizmo and bus_type are supported)
+imu_align      CW90FLIP    // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
+imu_spi_bus    0 //spi
+imu_rate       5000000 // Hz
+pin_imu_cs     17 //spi
+pin_imu_int    22 //spi and i2c
+imu_int_mode   FALLING // options: RISING (default), FALLING
 //imu_i2c_bus    -1 //i2c
 //imu_i2c_adr     0 //i2c: enter decimal i2c address, not hex (use 0 for default i2c address)
 
@@ -51,85 +53,94 @@ rcl_gizmo      IBUS  // options: NONE, MAVLINK, CRSF, SBUS, DSM, PPM, IBUS
 rcl_num_ch     6     // number of channels
 rcl_deadband   0     // center stick deadband
 rcl_ser_bus    0
+rcl_baud       115200
 //pin_rcl_ppm   -1
+rcl_rol_ch     1
+rcl_pit_ch     2
+rcl_thr_ch     3
+rcl_yaw_ch     4
+rcl_arm_ch     5
+rcl_arm_min    1000
+rcl_arm_max    2000
+rcl_flt_ch     6
 
 //--- BAR --- Barometer
-//bar_gizmo      NONE  // options: NONE, BMP390, BMP388, BMP280, MS5611, HP203B
-//bar_i2c_adr    0
-//bar_i2c_bus   -1
+bar_gizmo      BMP390  // options: NONE, BMP390, BMP388, BMP280, MS5611, HP203B
+bar_i2c_adr    119
+bar_i2c_bus    0
 
 //--- MAG --- Magnetometer
-//mag_gizmo      NONE  // options: NONE, QMC5883, QMC6309, RM3100
-//mag_i2c_adr    0
-//mag_i2c_bus   -1
+mag_gizmo      NONE  // options: NONE, QMC5883, QMC6309, RM3100
+mag_i2c_adr    0
+mag_i2c_bus   -1
 
 //--- BAT --- Battery Monitor  (use i2c bus -OR- adc pins)
-//bat_gizmo      NONE  // options: NONE, ADC, INA226, INA228
-//bat_i2c_adr    0
-//bat_i2c_bus   -1
-//pin_bat_i     -1
-//pin_bat_v     -1
-//bat_cal_v      1 //adc voltage scale, value is: actual_voltage_in_v / adc_reading
-//bat_cal_i,     1 //adc current scale, value is: actual_current_in_a / adc_reading; for ina226/228: rshunt value in ohm
+bat_gizmo      NONE  // options: NONE, ADC, INA226, INA228
+bat_i2c_adr    0
+bat_i2c_bus   -1
+pin_bat_i     -1
+pin_bat_v     -1
+bat_cal_v     1 //adc voltage scale, value is: actual_voltage_in_v / adc_reading
+bat_cal_i     1 //adc current scale, value is: actual_current_in_a / adc_reading; for ina226/228: rshunt value in ohm
 
 //--- GPS ---
-//gps_gizmo      NONE  // options: NONE, UBLOX
-//gps_baud       0   // use 0 for auto baud
-//gps_ser_bus   -1
+gps_gizmo      NONE  // options: NONE, UBLOX
+gps_baud       0   // use 0 for auto baud
+gps_ser_bus   -1
 
 //--- BBX --- Black Box Data Logger  (use spi -OR- mmc)
-//bbx_gizmo      NONE  // options: NONE, SDSPI, SDMMC
-//pin_bbx_cs    -1  // spi
-//bbx_spi_bus   -1  // spi
-//pin_mmc_dat   -1  // mmc
-//pin_mmc_clk   -1  // mmc
-//pin_mmc_cmd   -1  // mmc
+bbx_gizmo      NONE  // options: NONE, SDSPI, SDMMC
+pin_bbx_cs    -1  // spi
+bbx_spi_bus   -1  // spi
+pin_mmc_dat   -1  // mmc
+pin_mmc_clk   -1  // mmc
+pin_mmc_cmd   -1  // mmc
 
 //--- RDR --- Radar (use serial bus -OR- trig+echo pins)
-//rdr_gizmo      NONE  // options: NONE, LD2411S, LD2413, USD1, SR04
-//rdr_baud       0
-//rdr_ser_bus   -1
-//pin_rdr_trig  -1
-//pin_rdr_echo  -1
+rdr_gizmo      NONE  // options: NONE, LD2411S, LD2413, USD1, SR04
+rdr_baud       0
+rdr_ser_bus   -1
+pin_rdr_trig  -1
+pin_rdr_echo  -1
 
 //--- LED ---
-//led_on         LOW_IS_ON // options: LOW_IS_ON, HIGH_IS_ON
-//pin_led       -1
+led_on        HIGH_IS_ON // options: LOW_IS_ON, HIGH_IS_ON
+pin_led       25
 
 //--- AHR --- AHRS (keep MAHONY, unless you want to experiment)
-//ahr_gizmo      MAHONY  // options: MAHONY, MAHONY_BF, MADGWICK, VQF
+ahr_gizmo      MAHONY  // options: MAHONY, MAHONY_BF, MADGWICK, VQF
 
 //--- Serial bus 0 ---
-pin_ser0_rx   13
-pin_ser0_tx   12
+pin_ser0_rx   1
+pin_ser0_tx   0
 
 //--- Serial bus 1 ---
-//pin_ser1_rx   -1
-//pin_ser1_tx   -1 
+pin_ser1_rx   -1
+pin_ser1_tx   -1 
 
 //--- SPI bus 0 ---
-//pin_spi0_miso -1
-//pin_spi0_mosi -1
-//pin_spi0_sclk -1
+pin_spi0_miso 16
+pin_spi0_mosi 19
+pin_spi0_sclk 18
 
 //--- SPI bus 1 ---
-//pin_spi1_miso -1
-//pin_spi1_mosi -1
-//pin_spi1_sclk -1
+pin_spi1_miso -1
+pin_spi1_mosi -1
+pin_spi1_sclk -1
 
 //--- I2C Bus 0 ---
-//pin_i2c0_sda  -1
-//pin_i2c0_scl  -1
+pin_i2c0_sda  20
+pin_i2c0_scl  21
 
 //--- I2C Bus 1 ---
-//pin_i2c1_sda  -1
-//pin_i2c1_scl  -1
+pin_i2c1_sda  -1
+pin_i2c1_scl  -1
 
 //--- OUT Pins ---
-//pin_out0      -1
-//pin_out1      -1
-//pin_out2      -1
-//pin_out3      -1
+pin_out0      3
+pin_out1      4
+pin_out2      2
+pin_out3      5
 //pin_out4      -1
 //pin_out5      -1
 //pin_out6      -1
@@ -154,4 +165,4 @@ pin_ser0_tx   12
 //#define MF_CONFIG_CLEAR
 
 // Uncomment to print additional debug information and reduce startup delay
-//#define MF_DEBUG
+#define MF_DEBUG
