@@ -36,7 +36,7 @@ const char madflight_config[] = R""(
 //--- IMU --- Inertial Measurement Unit  (use spi -OR- i2c bus)
 imu_gizmo      ICM20948   // options: NONE, BMI270, MPU6000, MPU6050, MPU6500, MPU9150, MPU9250, ICM45686, ICM42688, ICM20948
 imu_bus_type   SPI     // options: SPI, I2C (not all combinations of gizmo and bus_type are supported)
-imu_align      CW90FLIP    // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
+imu_align      CW0FLIP    // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
 imu_spi_bus    0 //spi
 imu_rate       5000000 // Hz
 pin_imu_cs     17 //spi
@@ -104,11 +104,11 @@ pin_rdr_trig  -1
 pin_rdr_echo  -1
 
 //--- LED ---
-led_on        HIGH_IS_ON // options: LOW_IS_ON, HIGH_IS_ON
+led_on        LOW_IS_ON // options: LOW_IS_ON, HIGH_IS_ON
 pin_led       25
 
 //--- AHR --- AHRS (keep MAHONY, unless you want to experiment)
-ahr_gizmo      MAHONY  // options: MAHONY, MAHONY_BF, MADGWICK, VQF
+ahr_gizmo      IMU  // options: MAHONY, MAHONY_BF, MADGWICK, VQF, IMU
 
 //--- Serial bus 0 ---
 pin_ser0_rx   1
