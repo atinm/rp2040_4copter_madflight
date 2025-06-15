@@ -29,7 +29,8 @@ If things do not work as expected, have a good look at the startup messages!
 
 ========================================================================================================================*/
 
-#include <madflight_board.h>
+//define the board header to use, or comment out for none
+#define MF_BOARD "brd/default.h"
 
 const char madflight_config[] = R""(
 
