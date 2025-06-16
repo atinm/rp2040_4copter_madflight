@@ -61,8 +61,6 @@ rcl_pit_ch     2
 rcl_thr_ch     3
 rcl_yaw_ch     4
 rcl_arm_ch     5
-rcl_arm_min    1000
-rcl_arm_max    2000
 rcl_flt_ch     6
 
 //--- BAR --- Barometer
