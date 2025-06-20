@@ -2,21 +2,21 @@
                                               MADFLIGHT CONFIG
 ==========================================================================================================================
 
-The configuration is loaded from two strings: first from madflight_board in <madflight_board.h>, and then from 
+The configuration is loaded from two strings: first from madflight_board in <madflight_board.h>, and then from
 madflight_config in this file. If the same setting occurs more than once, the last one is applied.
 
 The strings are multi-line raw strings in with a key-value list. Anything after '#' or '/' is ignored as comment.
 
 You have 3 options to setup the flight controller:
 
-  1) Default - Keep "#include <madflight_board.h>", this defines the default pinout as shown on https://madflight.com 
-     for the supported processor families. Now edit madflight_config below, and uncomment and configure imu_gizmo, 
+  1) Default - Keep "#include <madflight_board.h>", this defines the default pinout as shown on https://madflight.com
+     for the supported processor families. Now edit madflight_config below, and uncomment and configure imu_gizmo,
      imu_bus_type, rcl_gizmo, and other lines as needed. (Do not change the pin_xxx_yyy and xxx_yyy_bus settings.)
- 
-  2) BetaFlight - Change "#include <madflight_board.h>" to the BetaFlight flight controller you want to use, for example: 
+
+  2) BetaFlight - Change "#include <madflight_board.h>" to the BetaFlight flight controller you want to use, for example:
      "#include <madflight_zzz_MTKS-MATEKH743.h>". See library/madflight/src for all available boards. Edit madflight_config
      to fine-tune the configuration.
- 
+
   3) Bare Metal - Remove "#include <madflight_board.h>", and set the full configuration in madflight_config below.
 
 Pins and spi/i2c/serial busses use zero-based numbering, i.e. "gps_ser_bus 0" connects the GPS to the first serial bus
@@ -37,7 +37,7 @@ const char madflight_config[] = R""(
 //--- IMU --- Inertial Measurement Unit  (use spi -OR- i2c bus)
 imu_gizmo      ICM20948   // options: NONE, BMI270, MPU6000, MPU6050, MPU6500, MPU9150, MPU9250, ICM45686, ICM42688, ICM20948
 imu_bus_type   SPI     // options: SPI, I2C (not all combinations of gizmo and bus_type are supported)
-imu_align      CW0FLIP    // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
+imu_align      CW0     // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
 imu_spi_bus    0 //spi
 imu_rate       5000000 // Hz
 pin_imu_cs     17 //spi
@@ -115,7 +115,7 @@ pin_ser0_tx   0
 
 //--- Serial bus 1 ---
 pin_ser1_rx   -1
-pin_ser1_tx   -1 
+pin_ser1_tx   -1
 
 //--- SPI bus 0 ---
 pin_spi0_miso 16
