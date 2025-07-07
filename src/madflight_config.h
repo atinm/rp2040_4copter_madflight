@@ -37,12 +37,12 @@ const char madflight_config[] = R""(
 //--- IMU --- Inertial Measurement Unit  (use spi -OR- i2c bus)
 imu_gizmo      ICM20948   // options: NONE, BMI270, MPU6000, MPU6050, MPU6500, MPU9150, MPU9250, ICM45686, ICM42688, ICM20948
 imu_bus_type   SPI     // options: SPI, I2C (not all combinations of gizmo and bus_type are supported)
-imu_align      CW0     // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
+imu_align      CW0    // options: CW0, CW90, CW180, CW270, CW0FLIP, CW90FLIP, CW180FLIP, CW270FLIP
 imu_spi_bus    0 //spi
 imu_rate       5000000 // Hz
 pin_imu_cs     17 //spi
 pin_imu_int    22 //spi and i2c
-imu_int_mode   FALLING // options: RISING (default), FALLING
+imu_use_mag    1
 //imu_i2c_bus    -1 //i2c
 //imu_i2c_adr     0 //i2c: enter decimal i2c address, not hex (use 0 for default i2c address)
 
@@ -140,18 +140,18 @@ pin_out0      3
 pin_out1      4
 pin_out2      2
 pin_out3      5
-//pin_out4      -1
-//pin_out5      -1
-//pin_out6      -1
-//pin_out7      -1
-//pin_out8      -1
-//pin_out9      -1
-//pin_out10     -1
-//pin_out11     -1
-//pin_out12     -1
-//pin_out13     -1
-//pin_out14     -1
-//pin_out15     -1
+pin_out4      -1
+pin_out5      -1
+pin_out6      -1
+pin_out7      -1
+pin_out8      -1
+pin_out9      -1
+pin_out10     -1
+pin_out11     -1
+pin_out12     -1
+pin_out13     -1
+pin_out14     -1
+pin_out15     -1
 
 )""; // End of madflight_config
 

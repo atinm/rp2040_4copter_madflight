@@ -43,14 +43,26 @@ Copyright (c) 2023-2025 https://madflight.com
 ##########################################################################################################################*/
 #include <Arduino.h>
 #include "madflight_config.h" //Edit this header file to setup the pins, hardware, radio, etc. for madflight
-#include <madflight.h>
+#include "madflight.h"
+
+//========================================================================================================================//
+//                                               INCLUDES                                                                 //
+//========================================================================================================================//
+
+// Function declarations
+void imu_watchdog_check();
+void imu_interrupt_handler_with_watchdog();
+
+//========================================================================================================================//
+//                                               VARIABLES                                                                //
+//========================================================================================================================//
 
 //========================================================================================================================//
 //                                               USER-SPECIFIED VARIABLES                                                 //
 //========================================================================================================================//
 
 //IMPORTANT: This is a safety feature which keeps props spinning when armed, and hopefully reminds the pilot to disarm!!!
-const float armed_min_throttle = 0.20; //Minimum throttle when armed, set to a value between ~0.10 and ~0.25 which keeps the props spinning at minimum speed.
+const float armed_min_throttle = 0.10; //Minimum throttle when armed, set to a value between ~0.10 and ~0.25 which keeps the props spinning at minimum speed.
 
 //Flight Mode: Uncommment only one
 #define FLIGHTMODE_RATE   //control rate - stick centered will keep current roll/pitch angle
@@ -88,12 +100,21 @@ unsigned long ramp_down_start = 0;
 const unsigned long ramp_down_duration = 5000; // 5 seconds in ms
 float ramp_down_start_throttle = 0.0f;
 
+bool allow_arming = false;
+bool prev_rcl_armed = false;
+
+// Throttle ramping variables
+float current_throttle = 0.0f;
+float target_throttle = 0.0f;
+const float max_throttle_change_per_second = 0.5f; // Maximum throttle change per second (0.5 = 50% per second)
+
 #ifdef PLATFORMIO
 //========================================================================================================================//
 //                                                       Forward declarations                                             //
 //========================================================================================================================//
 void led_Blink();
 void control_Rate(bool zero_integrators);
+void control_Angle(bool zero_integrators);
 void out_KillSwitchAndFailsafe();
 void out_Mixer();
 #endif
@@ -157,6 +178,12 @@ void imu_loop() {
   //Actuator mixing
   out_Mixer(); //Mixes PID outputs and sends command pulses to the motors, if mot.arm == true
 }
+
+
+
+
+
+
 
 //========================================================================================================================//
 //                      IMU UPDATE LOOP FUNCTIONS - in same order as they are called from imu_loop()                           //
@@ -308,7 +335,13 @@ void control_Rate(bool zero_integrators) {
 void out_KillSwitchAndFailsafe() {
   static bool was_armed = false;
   //Change to ARMED when rcl is armed (by switch or stick command)
-  if (!out.armed && rcl.armed) {
+  // Track rising edge of arm switch
+  if (!prev_rcl_armed && rcl.armed && rcl.connected()) {
+    allow_arming = true;  // Allow arming only if switch was toggled after boot
+  }
+  prev_rcl_armed = rcl.armed;
+
+  if (!out.armed && rcl.armed && rcl.connected() && allow_arming) {
     out.armed = true;
     Serial.println("OUT: ARMED");
     ramp_down_active = false;
@@ -342,6 +375,23 @@ void out_KillSwitchAndFailsafe() {
       Serial.println("OUT: DISARMED after ramp-down");
     }
   }
+}
+
+float apply_throttle_ramping(float input_throttle) {
+  // Update target throttle
+  target_throttle = input_throttle;
+
+  // Calculate maximum change allowed per loop iteration
+  float max_change_per_loop = max_throttle_change_per_second * imu.dt;
+
+  // Ramp current throttle towards target
+  if (current_throttle < target_throttle) {
+    current_throttle = min(current_throttle + max_change_per_loop, target_throttle);
+  } else if (current_throttle > target_throttle) {
+    current_throttle = max(current_throttle - max_change_per_loop, target_throttle);
+  }
+
+  return current_throttle;
 }
 
 void out_Mixer() {
@@ -378,7 +428,17 @@ Yaw right               (CCW+ CW-)       -++-
 
   // IMPORTANT: This is a safety feature which keeps props spinning when armed, and hopefully reminds the pilot to disarm!!!
   // Set motor outputs to at least armed_min_throttle, to keep at least one prop spinning when armed. The [out] module will disable motors when out.armed == false
-  float thr = armed_min_throttle + (1 - armed_min_throttle) * rcl.throttle;
+
+  // Apply throttle ramping to reduce current spikes
+  float ramped_throttle = apply_throttle_ramping(rcl.throttle);
+  float thr = armed_min_throttle + (1 - armed_min_throttle) * ramped_throttle;
+
+  // Debug output when ramping is active (only print occasionally to avoid spam)
+  static unsigned long last_ramp_debug = 0;
+  if (abs(ramped_throttle - rcl.throttle) > 0.01f && millis() - last_ramp_debug > 1000) {
+    Serial.printf("Throttle ramping: input=%.2f, ramped=%.2f\n", rcl.throttle, ramped_throttle);
+    last_ramp_debug = millis();
+  }
   // During ramp-down, override throttle with ramped value
   if (ramp_down_active) {
     unsigned long elapsed = millis() - ramp_down_start;
@@ -387,16 +447,38 @@ Yaw right               (CCW+ CW-)       -++-
     thr = armed_min_throttle + (1.0f - progress) * (ramp_down_start_throttle - armed_min_throttle);
   }
   if(rcl.throttle == 0 && !ramp_down_active) {
-    //if throttle idle, then run props at low speed without applying PID. This allows for stick commands for arm/disarm.
-    out.set(0, thr);
-    out.set(1, thr);
-    out.set(2, thr);
-    out.set(3, thr);
-  }else{
-    // Quad mixing
-    out.set(0, thr - PIDpitch.PID - PIDroll.PID - PIDyaw.PID); //M1 Back Right CW
-    out.set(1, thr + PIDpitch.PID - PIDroll.PID + PIDyaw.PID); //M2 Front Right CCW
-    out.set(2, thr - PIDpitch.PID + PIDroll.PID + PIDyaw.PID); //M3 Back Left CCW
-    out.set(3, thr + PIDpitch.PID + PIDroll.PID - PIDyaw.PID); //M4 Front Left CW
+    //if throttle idle, but armed, then run props at low speed without applying PID. This allows for stick commands for arm/disarm.
+    if (out.armed) {
+      out.set(0, thr);
+      out.set(1, thr);
+      out.set(2, thr);
+      out.set(3, thr);
+    } else {
+      // disarmed - turn off the props completely, we might have lost contact and want props turned off
+      out.set(0, 0.0);
+      out.set(1, 0.0);
+      out.set(2, 0.0);
+      out.set(3, 0.0);
+    }
+  } else{
+    // Quad mixing - if out.armed == false, we've disarmed due to link loss
+    if (out.armed) {
+      float m1 = thr - PIDpitch.PID - PIDroll.PID - PIDyaw.PID;
+      float m2 = thr + PIDpitch.PID - PIDroll.PID + PIDyaw.PID;
+      float m3 = thr - PIDpitch.PID + PIDroll.PID + PIDyaw.PID;
+      float m4 = thr + PIDpitch.PID + PIDroll.PID - PIDyaw.PID;
+      if (m1 < 0.0 || m2 < 0.0 || m3 < 0.0 || m4 < 0.0) {
+        Serial.printf("m1: %+2.f, m2: %+2.f, m3: %+2.f, m4: %+2.f\n", m1, m2, m3, m4);
+      }
+      out.set(0, m1); //M1 Back Right CW
+      out.set(1, m2); //M2 Front Right CCW
+      out.set(2, m3); //M3 Back Left CCW
+      out.set(3, m4); //M4 Front Left CW
+    } else {
+      out.set(0, 0.0);
+      out.set(1, 0.0);
+      out.set(2, 0.0);
+      out.set(3, 0.0);
+    }
   }
 }
