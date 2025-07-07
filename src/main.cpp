@@ -65,8 +65,8 @@ void imu_interrupt_handler_with_watchdog();
 const float armed_min_throttle = 0.10; //Minimum throttle when armed, set to a value between ~0.10 and ~0.25 which keeps the props spinning at minimum speed.
 
 //Flight Mode: Uncommment only one
-#define FLIGHTMODE_RATE   //control rate - stick centered will keep current roll/pitch angle
-//#define FLIGHTMODE_ANGLE  //control angle - stick centered will return to horizontal - IMPORTANT: execute CLI 'calimu' and 'save' before using this!!!
+//#define FLIGHTMODE_RATE   //control rate - stick centered will keep current roll/pitch angle
+#define FLIGHTMODE_ANGLE  //control angle - stick centered will return to horizontal - IMPORTANT: execute CLI 'calimu' and 'save' before using this!!!
 
 //Controller parameters (take note of defaults before modifying!):
 const float i_limit        = 25.0;      //Integrator saturation level, mostly for safety (default 25.0)
@@ -467,9 +467,6 @@ Yaw right               (CCW+ CW-)       -++-
       float m2 = thr + PIDpitch.PID - PIDroll.PID + PIDyaw.PID;
       float m3 = thr - PIDpitch.PID + PIDroll.PID + PIDyaw.PID;
       float m4 = thr + PIDpitch.PID + PIDroll.PID - PIDyaw.PID;
-      if (m1 < 0.0 || m2 < 0.0 || m3 < 0.0 || m4 < 0.0) {
-        Serial.printf("m1: %+2.f, m2: %+2.f, m3: %+2.f, m4: %+2.f\n", m1, m2, m3, m4);
-      }
       out.set(0, m1); //M1 Back Right CW
       out.set(1, m2); //M2 Front Right CCW
       out.set(2, m3); //M3 Back Left CCW
