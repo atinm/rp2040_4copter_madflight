@@ -29,6 +29,12 @@ Arming/disarming with sticks (when no arm switch is defined, i.e. cfg.rcl_arm_ch
     Arm: Pull both sticks toward you, yaw full right, and roll full left
     Disarm: Pull both sticks toward you, yaw full left, and roll full right
 
+Failsafe Features
+
+    - 3-second radio connection timeout: Immediate disarm if no radio connection for 3 seconds
+    - 30-second radio command timeout: Gradual ramp-down if no radio commands received for 30 seconds
+    - Motor ramp-down: 5-second gradual throttle reduction when disarming with spinning motors
+
 LED State                              Meaning
 ---------                              -------
 OFF                                    Not powered
@@ -108,6 +114,11 @@ float current_throttle = 0.0f;
 float target_throttle = 0.0f;
 const float max_throttle_change_per_second = 0.5f; // Maximum throttle change per second (0.5 = 50% per second)
 
+// 30-second radio timeout failsafe variables
+const unsigned long radio_timeout_failsafe = 30000; // 30 seconds in ms
+bool radio_timeout_failsafe_active = false;
+unsigned long last_radio_command_time = 0;
+
 #ifdef PLATFORMIO
 //========================================================================================================================//
 //                                                       Forward declarations                                             //
@@ -140,6 +151,9 @@ void setup() {
 
   //set initial desired yaw
   yaw_desired = ahr.yaw;
+
+  // Initialize radio timeout failsafe
+  last_radio_command_time = millis();
 }
 
 //========================================================================================================================//
@@ -334,6 +348,13 @@ void control_Rate(bool zero_integrators) {
 
 void out_KillSwitchAndFailsafe() {
   static bool was_armed = false;
+
+  // Update last radio command time when we receive new radio data
+  if (rcl.connected()) {
+    last_radio_command_time = millis();
+    radio_timeout_failsafe_active = false; // Reset failsafe if we have connection
+  }
+
   //Change to ARMED when rcl is armed (by switch or stick command)
   // Track rising edge of arm switch
   if (!prev_rcl_armed && rcl.armed && rcl.connected()) {
@@ -345,9 +366,17 @@ void out_KillSwitchAndFailsafe() {
     out.armed = true;
     Serial.println("OUT: ARMED");
     ramp_down_active = false;
+    radio_timeout_failsafe_active = false;
   }
 
-  //Change to DISARMED when rcl is disarmed, or if radio lost connection
+  // Check for 30-second radio timeout failsafe
+  if (out.armed && !radio_timeout_failsafe_active &&
+      (millis() - last_radio_command_time) >= radio_timeout_failsafe) {
+    radio_timeout_failsafe_active = true;
+    Serial.println("OUT: 30-second radio timeout failsafe triggered");
+  }
+
+  //Change to DISARMED when rcl is disarmed, or if radio lost connection (3-second timeout)
   if (out.armed && (!rcl.armed || !rcl.connected())) {
     // Only start ramp-down if motors are spinning (throttle > armed_min_throttle)
     float current_thr = armed_min_throttle + (1 - armed_min_throttle) * rcl.throttle;
@@ -366,11 +395,22 @@ void out_KillSwitchAndFailsafe() {
       }
     }
   }
+
+  // Start ramp-down for 30-second timeout failsafe
+  if (out.armed && radio_timeout_failsafe_active && !ramp_down_active) {
+    float current_thr = armed_min_throttle + (1 - armed_min_throttle) * rcl.throttle;
+    ramp_down_active = true;
+    ramp_down_start = millis();
+    ramp_down_start_throttle = current_thr;
+    Serial.println("OUT: Starting motor ramp-down due to 30-second radio timeout");
+  }
+
   // Complete ramp-down after duration
   if (ramp_down_active) {
     unsigned long elapsed = millis() - ramp_down_start;
     if (elapsed >= ramp_down_duration) {
       ramp_down_active = false;
+      radio_timeout_failsafe_active = false;
       out.armed = false;
       Serial.println("OUT: DISARMED after ramp-down");
     }
@@ -438,6 +478,15 @@ Yaw right               (CCW+ CW-)       -++-
   if (abs(ramped_throttle - rcl.throttle) > 0.01f && millis() - last_ramp_debug > 1000) {
     Serial.printf("Throttle ramping: input=%.2f, ramped=%.2f\n", rcl.throttle, ramped_throttle);
     last_ramp_debug = millis();
+  }
+
+  // Debug output for radio timeout status (only print occasionally to avoid spam)
+  static unsigned long last_timeout_debug = 0;
+  if (out.armed && millis() - last_timeout_debug > 5000) { // Every 5 seconds
+    unsigned long time_since_last_radio = millis() - last_radio_command_time;
+    Serial.printf("Radio timeout status: %lu ms since last command, failsafe active: %d\n",
+                  time_since_last_radio, radio_timeout_failsafe_active);
+    last_timeout_debug = millis();
   }
   // During ramp-down, override throttle with ramped value
   if (ramp_down_active) {
